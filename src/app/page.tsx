@@ -96,7 +96,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
         <iframe
           className="gcal"
           title="Google Calendar"
-          src={`https://calendar.google.com/calendar/embed?src=${encodeURIComponent(email)}&ctz=${encodeURIComponent(tz)}&mode=WEEK&showTitle=0&showPrint=0&showTz=0`}
+          src={`https://calendar.google.com/calendar/embed?src=${encodeURIComponent(email)}&ctz=${encodeURIComponent(tz)}&mode=MONTH&showTitle=0&showPrint=0&showTz=0`}
         />
       )}
 
