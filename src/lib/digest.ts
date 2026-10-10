@@ -63,6 +63,7 @@ export async function buildRulesDigest(userId: string): Promise<Digest> {
 /** Free pipeline for one user: sync -> rule scores -> fallback digest (never clobbers a Claude digest). */
 export async function runDaily(userId: string) {
   const sync = await syncUser(userId);
+  if (sync.errors.length) console.error("sync errors", sync.errors);
   const scored = await scoreWithRules(userId);
   const db = adminClient();
   const date = todayIn();
