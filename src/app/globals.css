@@ -26,3 +26,6 @@ button, .btn { font: inherit; background: var(--accent); color: var(--bg); borde
 button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
 .center { min-height: 80vh; display: grid; place-content: center; text-align: center; gap: 14px; padding: 0 16px; }
 .empty { color: var(--muted); }
+.tabs { display: flex; gap: 6px; overflow-x: auto; margin: 18px 0 14px; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.tabs a { white-space: nowrap; padding: 7px 14px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); text-decoration: none; font-size: .92rem; }
+.tabs a.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }

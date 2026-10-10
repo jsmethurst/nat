@@ -17,27 +17,66 @@ function Score({ n }: { n: number | null }) {
   return <span className={`pill ${n >= 70 ? "hot" : n >= 40 ? "warm" : ""}`}>{n}</span>;
 }
 
-export default async function Home() {
+const TABS = [
+  { key: "pressing", label: "Pressing" },
+  { key: "calendar", label: "Calendar", source: "gcal" },
+  { key: "gmail", label: "Gmail", source: "gmail" },
+  { key: "outlook", label: "Outlook" },
+  { key: "signal", label: "Signal" },
+  { key: "whatsapp", label: "WhatsApp" },
+] as const;
+
+const PRESSING_MIN = 55;
+
+function ItemCard({ i, showSource }: { i: Item; showSource?: boolean }) {
+  const meta = [showSource ? (i.source === "gcal" ? "Calendar" : "Gmail") : null, i.source === "gcal" ? null : i.sender, fmt(i.occurred_at)]
+    .filter(Boolean)
+    .join(" \u00b7 ");
+  return (
+    <div className={`card ${i.is_unread ? "unread" : ""}`}>
+      <a href={i.url ?? "#"} target="_blank" rel="noreferrer">
+        <div className="row"><span className="title">{i.title}</span><Score n={i.importance} /></div>
+        <div className="why">{meta}</div>
+        {i.reason && <div className="why">{i.reason}</div>}
+      </a>
+    </div>
+  );
+}
+
+export default async function Home({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { tab: tabParam } = await searchParams;
+  const tab = TABS.find((t) => t.key === tabParam) ?? TABS[0];
+
   const supabase = await createClient();
   const { data: digestRow } = await supabase.from("digests").select("content,digest_date,created_at,source").order("digest_date", { ascending: false }).limit(1).maybeSingle();
-  const { data: itemRows } = await supabase
-    .from("items")
-    .select("id,source,sender,title,snippet,occurred_at,url,is_unread,importance,reason")
-    .lte("occurred_at", new Date(Date.now() + 7 * 864e5).toISOString())
-    .order("occurred_at", { ascending: false })
-    .limit(200);
-  const items = (itemRows ?? []) as Item[];
-  const byId = new Map(items.map((i) => [i.id, i]));
   const digest = digestRow?.content as Digest | undefined;
+
+  const cols = "id,source,sender,title,snippet,occurred_at,url,is_unread,importance,reason";
+  let items: Item[] = [];
+  if (tab.key === "pressing") {
+    const { data } = await supabase
+      .from("items")
+      .select(cols)
+      .gte("importance", PRESSING_MIN)
+      .lte("occurred_at", new Date(Date.now() + 7 * 864e5).toISOString())
+      .order("occurred_at", { ascending: false })
+      .limit(100);
+    items = (data ?? []) as Item[];
+  } else if ("source" in tab) {
+    const q = supabase.from("items").select(cols).eq("source", tab.source);
+    const { data } =
+      tab.source === "gcal"
+        ? await q.gte("occurred_at", new Date(Date.now() - 864e5).toISOString()).order("occurred_at", { ascending: true }).limit(200)
+        : await q.order("occurred_at", { ascending: false }).limit(200);
+    items = (data ?? []) as Item[];
+  }
 
   return (
     <main>
       <div className="top">
         <div>
           <h1>Today</h1>
-          <div className="sub">
-            {digestRow ? `Updated ${fmt(digestRow.created_at)}` : "No summary yet"}
-          </div>
+          <div className="sub">{digestRow ? `Updated ${fmt(digestRow.created_at)}` : "No summary yet"}</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <form action="/api/sync" method="post"><button>Refresh</button></form>
@@ -45,53 +84,27 @@ export default async function Home() {
         </div>
       </div>
 
-      {!digest ? (
-        <p className="empty">Your first summary is being prepared &mdash; this can take a minute after signing in. Tap Refresh to check.</p>
+      <nav className="tabs">
+        {TABS.map((t) => (
+          <a key={t.key} href={t.key === "pressing" ? "/" : `/?tab=${t.key}`} className={t.key === tab.key ? "active" : ""}>{t.label}</a>
+        ))}
+      </nav>
+
+      {tab.key === "pressing" && digest && <p className="headline">{digest.headline}</p>}
+
+      {"source" in tab || tab.key === "pressing" ? (
+        items.length === 0 ? (
+          <p className="empty">
+            {tab.key === "pressing"
+              ? digest ? "Nothing pressing right now." : "Your first summary is being prepared. Tap Refresh to check."
+              : "Nothing here yet."}
+          </p>
+        ) : (
+          items.map((i) => <ItemCard key={i.id} i={i} showSource={tab.key === "pressing"} />)
+        )
       ) : (
-        <>
-          <p className="headline">{digest.headline}</p>
-          {digestRow?.source === "rules" && (
-            <p className="sub">Quick summary for now &mdash; the full smart summary arrives each morning.</p>
-          )}
-
-          <h2>Needs you ({digest.important.length})</h2>
-          {digest.important.length === 0 && <p className="empty">Nothing needs you right now.</p>}
-          {digest.important.map((d) => {
-            const it = byId.get(d.item_id);
-            const body = (
-              <>
-                <div className="row"><span className="title">{d.title}</span>{it && <Score n={it.importance} />}</div>
-                <div className="why">{d.why}</div>
-                {d.action && <div className="action">{d.action}</div>}
-              </>
-            );
-            return <div className="card" key={d.item_id}>{it?.url ? <a href={it.url} target="_blank" rel="noreferrer">{body}</a> : body}</div>;
-          })}
-
-          {digest.coming_up.length > 0 && (
-            <>
-              <h2>Coming up</h2>
-              {digest.coming_up.map((c) => (
-                <div className="card" key={c.item_id}><div className="row"><span className="title">{c.title}</span><span className="pill">{c.when}</span></div></div>
-              ))}
-            </>
-          )}
-
-          <h2>Everything else</h2>
-          <p className="why">{digest.everything_else}</p>
-        </>
+        <p className="empty">{tab.label} isn&rsquo;t connected yet.</p>
       )}
-
-      <h2>All messages &amp; events ({items.length})</h2>
-      {items.map((i) => (
-        <div className={`card ${i.is_unread ? "unread" : ""}`} key={i.id}>
-          <a href={i.url ?? "#"} target="_blank" rel="noreferrer">
-            <div className="row"><span className="title">{i.title}</span><Score n={i.importance} /></div>
-            <div className="why">{i.source === "gcal" ? "Event" : i.sender} &middot; {fmt(i.occurred_at)}</div>
-            {i.reason && <div className="why">{i.reason}</div>}
-          </a>
-        </div>
-      ))}
     </main>
   );
 }
