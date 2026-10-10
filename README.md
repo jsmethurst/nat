@@ -13,7 +13,7 @@ Not supported: iMessage, WhatsApp, Signal (no official APIs on iPhone). Use iOS
 2. Daily cron (05:00 UTC = 08:00 Istanbul) and the **Refresh** button run: sync → score every new item 0–100 → write the day's digest.
 3. Home page shows: headline, **Needs you**, **Coming up**, a themed count of **Everything else**, then the full list.
 
-Stack: Next.js 15 (App Router) · Supabase (Postgres + Auth) · Claude (`claude-opus-5-5`, override with `ANTHROPIC_MODEL`) · Vercel.
+Stack: Next.js 15 (App Router) · Supabase (Postgres + Auth) · Claude (`claude-sonnet-5-5`, override with `ANTHROPIC_MODEL`) · Vercel.
 Supabase project: `nat-inbox` (`hmlitbveiapwwkzptyqg`, eu-central-1). Schema: `supabase/migrations/0001_init.sql` (already applied).
 
 ## Setup
