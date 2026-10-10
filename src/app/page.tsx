@@ -102,9 +102,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
         ) : (
           items.map((i) => <ItemCard key={i.id} i={i} showSource={tab.key === "pressing"} />)
         )
-      ) : (
-        <p className="empty">{tab.label} isn&rsquo;t connected yet.</p>
-      )}
+      ) : null}
     </main>
   );
 }
