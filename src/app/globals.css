@@ -30,3 +30,12 @@ button.ghost { background: transparent; color: var(--muted); border: 1px solid v
 .tabs a { white-space: nowrap; padding: 7px 14px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); text-decoration: none; font-size: .92rem; }
 .tabs a.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 .gcal { width: 100%; height: 70vh; min-height: 480px; border: 1px solid var(--line); border-radius: 14px; background: #fff; margin-bottom: 18px; }
+.bang { display: inline-grid; place-content: center; width: 17px; height: 17px; margin-left: 7px; border-radius: 50%; background: var(--hot); color: #fff; font-size: .72rem; font-weight: 700; line-height: 1; }
+dialog.status { width: min(440px, calc(100vw - 32px)); background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; }
+dialog.status::backdrop { background: rgba(0, 0, 0, .45); }
+dialog.status h3 { margin: 0; font-size: 1.1rem; }
+.srow { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--line); }
+.srow:first-of-type { margin-top: 12px; }
+.dot { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-content: center; color: #fff; font-size: .8rem; font-weight: 700; }
+.dot.ok { background: var(--accent); } .dot.warn { background: var(--warm); } .dot.bad { background: var(--hot); }
+.srow .why { word-break: break-word; }

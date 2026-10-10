@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Digest } from "@/lib/digest";
+import { adminClient } from "@/lib/supabase/admin";
+import StatusButton, { type StatusRow } from "./status-button";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +45,34 @@ function ItemCard({ i, showSource }: { i: Item; showSource?: boolean }) {
   );
 }
 
+const STALE_MS = 30 * 36e5;
+const ago = (iso: string) => {
+  const m = Math.round((Date.now() - new Date(iso).getTime()) / 6e4);
+  return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 2880 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`;
+};
+
+async function getStatus(userId: string): Promise<StatusRow[]> {
+  const { data } = await adminClient()
+    .from("connected_accounts")
+    .select("email,last_synced_at,last_sync_error")
+    .eq("user_id", userId);
+  const acct = data?.[0];
+  let google: Omit<StatusRow, "name">;
+  if (!acct) google = { state: "bad", detail: "Not connected. Sign in again." };
+  else if (acct.last_sync_error) google = { state: "bad", detail: `Sync failing: ${acct.last_sync_error}` };
+  else if (!acct.last_synced_at) google = { state: "warn", detail: `${acct.email}: connected, no sync yet. Tap Refresh.` };
+  else if (Date.now() - new Date(acct.last_synced_at).getTime() > STALE_MS) google = { state: "warn", detail: `${acct.email}: last synced ${ago(acct.last_synced_at)}. Out of date.` };
+  else google = { state: "ok", detail: `${acct.email}: synced ${ago(acct.last_synced_at)}` };
+  const none = { state: "bad" as const, detail: "Not connected" };
+  return [
+    { name: "Gmail", ...google },
+    { name: "Google Calendar", ...google },
+    { name: "Outlook", ...none },
+    { name: "Signal", ...none },
+    { name: "WhatsApp", ...none },
+  ];
+}
+
 export default async function Home({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab: tabParam } = await searchParams;
   const tab = TABS.find((t) => t.key === tabParam) ?? TABS[0];
@@ -50,6 +80,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   const email = auth.user?.email ?? "";
+  const statusRows = auth.user ? await getStatus(auth.user.id) : [];
   const { data: digestRow } = await supabase.from("digests").select("content,digest_date,created_at,source").order("digest_date", { ascending: false }).limit(1).maybeSingle();
   const digest = digestRow?.content as Digest | undefined;
 
@@ -82,6 +113,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <form action="/api/sync" method="post"><button>Refresh</button></form>
+          <StatusButton rows={statusRows} />
           <form action="/auth/logout" method="post"><button className="ghost">Sign out</button></form>
         </div>
       </div>

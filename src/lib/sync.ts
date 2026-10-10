@@ -26,10 +26,12 @@ export async function syncUser(userId?: string): Promise<{ accounts: number; ite
           .upsert(rows.slice(i, i + 200), { onConflict: "user_id,source,external_id" });
         if (e) throw e;
       }
-      await db.from("connected_accounts").update({ last_synced_at: new Date().toISOString() }).eq("id", a.id);
+      await db.from("connected_accounts").update({ last_synced_at: new Date().toISOString(), last_sync_error: null }).eq("id", a.id);
       total += rows.length;
     } catch (e) {
-      errors.push(`${a.email}: ${e instanceof Error ? e.message : JSON.stringify(e)}`);
+      const msg = e instanceof Error ? e.message : JSON.stringify(e);
+      errors.push(`${a.email}: ${msg}`);
+      await db.from("connected_accounts").update({ last_sync_error: msg.slice(0, 500) }).eq("id", a.id);
     }
   }
   return { accounts: accounts?.length ?? 0, items: total, errors };
