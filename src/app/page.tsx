@@ -48,6 +48,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
   const tab = TABS.find((t) => t.key === tabParam) ?? TABS[0];
 
   const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  const email = auth.user?.email ?? "";
   const { data: digestRow } = await supabase.from("digests").select("content,digest_date,created_at,source").order("digest_date", { ascending: false }).limit(1).maybeSingle();
   const digest = digestRow?.content as Digest | undefined;
 
@@ -89,6 +91,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
           <a key={t.key} href={t.key === "pressing" ? "/" : `/?tab=${t.key}`} className={t.key === tab.key ? "active" : ""}>{t.label}</a>
         ))}
       </nav>
+
+      {tab.key === "calendar" && email && (
+        <iframe
+          className="gcal"
+          title="Google Calendar"
+          src={`https://calendar.google.com/calendar/embed?src=${encodeURIComponent(email)}&ctz=${encodeURIComponent(tz)}&mode=WEEK&showTitle=0&showPrint=0&showTz=0`}
+        />
+      )}
 
       {tab.key === "pressing" && digest && <p className="headline">{digest.headline}</p>}
 
