@@ -37,6 +37,7 @@ export type RawItem = {
   ends_at?: string;
   url?: string;
   is_unread?: boolean;
+  labels?: string[];
 };
 
 type GmailList = { messages?: { id: string }[]; nextPageToken?: string };
@@ -83,6 +84,7 @@ export async function fetchGmail(token: string, days: number, cap = 300): Promis
         occurred_at: new Date(Number(m.internalDate)).toISOString(),
         url: `https://mail.google.com/mail/u/0/#inbox/${m.threadId}`,
         is_unread: m.labelIds?.includes("UNREAD") ?? false,
+        labels: m.labelIds ?? [],
       });
     }
   }

@@ -19,7 +19,7 @@ function Score({ n }: { n: number | null }) {
 
 export default async function Home() {
   const supabase = await createClient();
-  const { data: digestRow } = await supabase.from("digests").select("content,digest_date,created_at").order("digest_date", { ascending: false }).limit(1).maybeSingle();
+  const { data: digestRow } = await supabase.from("digests").select("content,digest_date,created_at,source").order("digest_date", { ascending: false }).limit(1).maybeSingle();
   const { data: itemRows } = await supabase
     .from("items")
     .select("id,source,sender,title,snippet,occurred_at,url,is_unread,importance,reason")
@@ -36,7 +36,7 @@ export default async function Home() {
         <div>
           <h1>Today</h1>
           <div className="sub">
-            {digestRow ? `Summary from ${fmt(digestRow.created_at)}` : "No summary yet"}
+            {digestRow ? `Updated ${fmt(digestRow.created_at)}` : "No summary yet"}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -50,6 +50,9 @@ export default async function Home() {
       ) : (
         <>
           <p className="headline">{digest.headline}</p>
+          {digestRow?.source === "rules" && (
+            <p className="sub">Quick summary for now &mdash; the full smart summary arrives each morning.</p>
+          )}
 
           <h2>Needs you ({digest.important.length})</h2>
           {digest.important.length === 0 && <p className="empty">Nothing needs you right now.</p>}
