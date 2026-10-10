@@ -18,7 +18,7 @@ export async function syncUser(userId?: string): Promise<{ accounts: number; ite
       // First sync looks back 7 days; later syncs 3 days (overlap makes it idempotent).
       const days = a.last_synced_at ? 3 : 7;
       const [mail, cal] = await Promise.all([fetchGmail(token, days), fetchCalendar(token, 7)]);
-      const rows = [...mail, ...cal].map((r) => ({ ...r, user_id: a.user_id, account_id: a.id }));
+      const rows = [...mail, ...cal].map((r) => ({ ...r, is_unread: r.is_unread ?? false, labels: r.labels ?? [], user_id: a.user_id, account_id: a.id }));
       for (let i = 0; i < rows.length; i += 200) {
         // Upsert deliberately omits triage columns so existing scores survive a re-sync.
         const { error: e } = await db
@@ -29,7 +29,7 @@ export async function syncUser(userId?: string): Promise<{ accounts: number; ite
       await db.from("connected_accounts").update({ last_synced_at: new Date().toISOString() }).eq("id", a.id);
       total += rows.length;
     } catch (e) {
-      errors.push(`${a.email}: ${e instanceof Error ? e.message : String(e)}`);
+      errors.push(`${a.email}: ${e instanceof Error ? e.message : JSON.stringify(e)}`);
     }
   }
   return { accounts: accounts?.length ?? 0, items: total, errors };
